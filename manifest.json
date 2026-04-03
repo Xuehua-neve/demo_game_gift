@@ -6,7 +6,7 @@
   "display": "fullscreen",
   "background_color": "#333333",
   "theme_color": "#333333",
-  "orientation": "portrait  肖像",
+  "orientation": "portrait",
   "icons": [
     {"src": "icons/icon_128.png", "sizes": "128x128", "type": "image/png"},
     {"src": "icons/icon_144.png", "sizes": "144x144", "type": "image/png"},

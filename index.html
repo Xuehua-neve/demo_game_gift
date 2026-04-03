@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8" />
 
+
+<!-- Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+
+<!-- zimjs.com - JavaScript Canvas Framework -->
+<title>Guess Your Christmas Gift</title>
+
 <!--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ZIM Zapps
@@ -38,17 +47,6 @@ https://zimjs.com/zapps/tool.html
 		if (location.protocol === "https:" && "serviceWorker" in navigator) navigator.serviceWorker.register("./serviceworker.js");
 	});
 </script>
-
-<!-- Font -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-	href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Lato:wght@300;400;700&display=swap"
-	rel="stylesheet" />
-
-<!-- zimjs.com - JavaScript Canvas Framework -->
-<title>Guess Your Christmas Gift</title>
-
 
 <script type="module">
 
@@ -104,6 +102,8 @@ function ready() {
 	    let activeGift = null;
 	    let motionReady = false;
 	    let bgMusicInstance = null;
+	    let soundInstance = null;
+	
 	
 	    // Audio
 	    function ensureAudio() {
@@ -131,10 +131,13 @@ function ready() {
 	            lastShake = now;
 	            ensureAudio();
 	
-	            if (SOUNDS[curLevel]) SOUNDS[curLevel].play();
-	            // try { SOUNDS[curLevel](audioCtx); } catch (err) { }
+	            if (SOUNDS[curLevel]) {
+	                if (soundInstance) { soundInstance.stop(); soundInstance = null; }
+	                soundInstance = SOUNDS[curLevel].play();
+	            }
 	
-	            if (activeGift) activeGift.wiggle("rotation", 0, 100, 100, 55, 95, 520);
+	
+	            if (activeGift) activeGift.wiggle("rotation", 0, 5, 12, 55, 0.3, 2);
 	        }
 	    }
 	
@@ -283,6 +286,7 @@ function ready() {
 	
 	        nextLevelBtn.on("click", () => {
 	            stopConfetti();
+	            if (soundInstance) { soundInstance.stop(); soundInstance = null; }
 	            bgMask.dispose();
 	            card.dispose();
 	            startSfx.play({ volume: 0.2 })
@@ -304,6 +308,7 @@ function ready() {
 	        wrongs.fill(0); 
 	        stopConfetti();
 	        if (bgMusicInstance) { bgMusicInstance.stop(); bgMusicInstance = null; }
+	        if (soundInstance) { soundInstance.stop(); soundInstance = null; }
 	        gamePgs.forEach(gp => {
 	            gp.inp.text = ""; gp.errLbl.text = "";
 	            gp.hintBtn.alp(0).vis(false);

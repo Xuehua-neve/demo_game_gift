@@ -6,7 +6,7 @@
 var cacheName = 'zim_pwa_Gift';
 var filesToCache = [
   './',
-  'Gift.html',
+  'index.html',
   'assets/gift.png',
   'assets/Musicalbox.mp3',
   'assets/Cuckooclock.mp3',
