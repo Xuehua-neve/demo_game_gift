@@ -2,7 +2,7 @@
   "name": "Gift",
   "short_name": "Gift",
   "lang": "en-US",
-  "start_url": "./Gift.html",
+  "start_url": "./index.html",
   "display": "fullscreen",
   "background_color": "#333333",
   "theme_color": "#333333",
