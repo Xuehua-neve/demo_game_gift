@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<!--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ZIM Zapps
+Progressive Web App (PWA) tool output from
+https://zimjs.com/zapps/tool.html 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-->
+
+<!-- ZIM PWA STEP 1 - MANIFEST -->
+<link rel="manifest" href="manifest.json">
+
+<!-- ZIM PWA STEP 2 - META -->
+<meta name="apple-mobile-web-app-title" content="Gift">
+<meta name="theme-color" content="#333333">
+<meta name="msapplication-TileColor" content="#333333">
+
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<link rel="apple-touch-icon" href="icons/icon_152.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="msapplication-TileImage" content="icons/icon_144.png">
+
+<!-- should have faveicons - see link below -->
+<!-- see https://www.favicon-generator.org/ -->
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="msapplication-starturl" content="./">
+
+<!-- ZIM PWA STEP 3 - SERVICE WORKER -->
+<script>
+	window.addEventListener("DOMContentLoaded", function () {
+		if (location.protocol === "https:" && "serviceWorker" in navigator) navigator.serviceWorker.register("./serviceworker.js");
+	});
+</script>
+
+<!-- Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+	href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Lato:wght@300;400;700&display=swap"
+	rel="stylesheet" />
+
+<!-- zimjs.com - JavaScript Canvas Framework -->
+<title>Guess Your Christmas Gift</title>
+
+
+<script type="module">
+
+import zim from "https://zimjs.org/cdn/019/zim";
+
+// See Docs under Frame for FIT, FILL, FULL, and TAG
+new Frame(FIT, 750, 1334, "rgb(13, 8, 32)", black, ready, ["gift.png","Musical box.mp3", "Cuckoo clock.mp3","Kitten.wav","game-complete.mp3", "game-start.mp3", "game-peaceful.mp3"], "assets/");
+function ready() {
+
+	// ZIM PWA STEP 4 - ADD TO HOME SCREEN (A2HS)
+	// NOTE: new PWA() works with ZIM Cat 04 or beyond
+	// Message shows if only if running from mobile Browser
+	// See https://zimjs.com/docs.html?item=PWA for more options
+
+	new PWA(runZapp);
+	function runZapp() {
+	    // Preset---------------------------------------------
+	    //  LEVEL DATA
+	    const LEVELS = [
+	        {
+	            num: 1, 
+	            answer: "music box", 
+	            theme: "rgba(180,20,20,.22)",
+	            btnColor: "rgba(255, 68, 68,.8)",
+	            cue: "🎵  Shake to hear a sound hint",
+	            hint: "🎶 It plays a delicate melody when wound up — often found inside a keepsake box.",
+	            last: false, nextLabel: "Next Level →"
+	        },
+	        {
+	            num: 2, 
+	            answer: "cuckoo clock", 
+	            theme: "#1e8449",
+	            btnColor: "#1e8449",
+	            cue: "⏰  Shake to hear a sound hint",
+	            hint: "🐦 Tick-tock! A wooden timepiece — a little bird pops out to announce the hour.",
+	            last: false, nextLabel: "Next Level →"
+	        },
+	        {
+	            num: 3, 
+	            answer: "kitten", 
+	            theme: "#1a6a9a",
+	            btnColor: "#1a6a9a",
+	            cue: "🐱  Shake to hear a sound hint",
+	            hint: "🐾 Soft paws and a tiny meow — this fluffy furball will purr into your heart!",
+	            last: true, nextLabel: "Finish 🎄"
+	        }
+	    ];
+	
+	    let curLevel = 0;
+	    const wrongs = [0, 0, 0];
+	    let audioCtx = null;
+	    let lastShake = 0;
+	    let activeGift = null;
+	    let motionReady = false;
+	    let bgMusicInstance = null;
+	
+	    // Audio
+	    function ensureAudio() {
+	        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+	        if (audioCtx.state === "suspended") audioCtx.resume();
+	    }
+	
+	    const sndMusicBox = new Aud("Musical box.mp3");
+	    const sndCuckoo = new Aud("Cuckoo clock.mp3");
+	    const sndKitten = new Aud("Kitten.wav");
+	    const bgMusic = new Aud("game-peaceful.mp3");
+	    const startSfx = new Aud("game-start.mp3");
+	    const endSfx = new Aud("game-complete.mp3");
+	
+	    const SOUNDS = [sndMusicBox, sndCuckoo, sndKitten];
+	
+	    // Motion Capture
+	    function onMotion(e) {
+	        const a = e.acceleration || e.accelerationIncludingGravity;
+	        if (!a) return;
+	        const mag = Math.abs(a.x || 0) + Math.abs(a.y || 0) + Math.abs(a.z || 0);
+	        const now = Date.now();
+	
+	        if (mag > 22 && now - lastShake > 1100) {
+	            lastShake = now;
+	            ensureAudio();
+	
+	            if (SOUNDS[curLevel]) SOUNDS[curLevel].play();
+	            // try { SOUNDS[curLevel](audioCtx); } catch (err) { }
+	
+	            if (activeGift) activeGift.wiggle("rotation", 0, 100, 100, 55, 95, 520);
+	        }
+	    }
+	
+	    function setupMotion() {
+	        if (motionReady) return;
+	        new PermissionAsk(yes => {
+	            if (yes) {
+	                F.on("devicemotion", onMotion);
+	                motionReady = true;
+	            }
+	        }, "devicemotion");
+	    }
+	
+	    // Asset----------------------------------------------
+	    // STAR
+	    function makeStarfield(num,parent) {
+	        loop(num, () => {
+	            let star = new Circle(Math.random() * 2 + 0.7, "rgba(179, 179, 179, 0.4)")
+	                .loc(Math.random() * W, Math.random() * H, parent)
+	                .alp(Math.random())
+	                .noMouse()
+	            star.animate({
+	                props: { alpha: 0 },
+	                time: 1 + Math.random() * 3,
+	                rewind: true,
+	                loop: true
+	            });
+	        });
+	    }
+	
+	    // Bg
+	    function Bg(radius,CenterColor,SideColor,parent){
+	        const softColor = new RadialColor(
+	            [CenterColor, SideColor],
+	            [0, 1],
+	            0, 0, 0,
+	            0, 0, radius
+	        );
+	        new Circle(radius, softColor)
+	            .center(parent)
+	            .mov(0, -120)
+	            .noMouse()
+	        makeStarfield(100, parent);
+	    }
+	
+	    // Emitter
+	    let confEmitter = null;
+	    function launchConfetti() {
+	        if (confEmitter) { confEmitter.dispose(); confEmitter = null; }
+	        confEmitter = new Emitter({
+	                obj: new Circle({ min: 5, max: 30 }, 
+	                [yellow, orange, pink, green,blue]),
+	                num: 3,
+	            })
+	            .center()
+	            .mov(0,-100)
+	            .noMouse()
+	            .spurt(80)
+	            .addTo(S);
+	        endSfx.play({ volume: 0.6 })
+	    }
+	    function stopConfetti() {
+	         if (confEmitter) { 
+	            confEmitter.dispose(); 
+	            confEmitter = null; 
+	        } 
+	    }
+	
+	    // Do Check--------------------------------------------
+	    function doCheck(li, inp, errLbl) {
+	        const val = (inp.text || "").trim().toLowerCase().replace(/[^a-z\s]/g, "");
+	        const ans = LEVELS[li].answer;
+	        // check
+	        if (val === ans) { 
+	            inp.text = ""; 
+	            errLbl.text = ""; 
+	            doSuccess(li); 
+	            return null; 
+	        }
+	        wrongs[li]++;
+	        const w = wrongs[li];
+	        inp.wiggle("x", inp.x, 12, 20, 35, 60, 340);
+	        if (w >= 5) { 
+	            errLbl.text = "❌ Still wrong — use the hint or skip!"; 
+	            return "showSkip"; 
+	        }else if (w >= 3) { 
+	            errLbl.text = `❌ Incorrect — check the hint! (${w}/5)`; 
+	            return "showHint"; 
+	        }else { 
+	            errLbl.text = `❌ Not quite! Keep trying (${w}/5)`; 
+	            return null; 
+	        }
+	    }
+	
+	    // Success
+	    function doSuccess(li) {
+	        const lv = LEVELS[li];
+	
+	        const bgMask = new Rectangle(W, H, "rgba(0,0,0,.55)")
+	            .alp(0)
+	            .addTo(S)
+	        bgMask.animate({ props: { alpha: 1 }, time: .3 });
+	
+	        const CardX = 560;
+	        const card = new Container(CardX, 320)
+	            .centerReg(S)
+	            .loc(W / 2, H / 2)
+	            .alp(0)
+	            .sca(.75)
+	            .addTo(S)
+	        new Rectangle(CardX, 320, "rgba(30,30,50,1)", "rgba(255,255,255,.15)", 1, 26)
+	            .addTo(card);
+	        card.animate({ 
+	            props: { alpha: 1, scaleX: 1, scaleY: 1 }, 
+	            time: .35, 
+	            ease: "backOut" 
+	        });
+	
+	        const emoji = lv.num === 1 ? "🎵" : lv.num === 2 ? "🕐" : "🐱";
+	        new Label(emoji, 50, "Arial", white)
+	            .centerReg()
+	            .addTo(card)
+	            .noMouse()
+	            .loc(CardX / 2, 62);
+	        new Label("Congrats! You got it!", 28, "Arial", white)
+	            .centerReg()
+	            .addTo(card)
+	            .noMouse()
+	            .loc(CardX / 2, 140);
+	        new Label("Answer: " + lv.answer.replace(/\b\w/g, c => c.toUpperCase()), 20, "Arial", "rgba(255,255,255,.5)")
+	            .centerReg()
+	            .addTo(card)
+	            .noMouse()
+	            .loc(CardX / 2, 188);
+	
+	        const nextLevelBtn = new Button({
+	                width: 240, height: 64,
+	                label: new Label(lv.nextLabel, 22, "Arial", white),
+	                backgroundColor: "#22c55e", 
+	                rollBackgroundColor: "#16a34a",
+	                corner: 32
+	            })
+	            .centerReg()
+	            .addTo(card)
+	            .loc(CardX / 2, 248);
+	
+	        nextLevelBtn.on("click", () => {
+	            stopConfetti();
+	            bgMask.dispose();
+	            card.dispose();
+	            startSfx.play({ volume: 0.2 })
+	            if (lv.last) {
+	                pages.go(finalPg, "fade");
+	            } else {
+	                curLevel = li + 1;                     
+	                activeGift = gamePgs[li + 1].gift;    
+	                pages.go(gamePgs[li + 1], "slide");  
+	            }
+	        });
+	
+	        launchConfetti();
+	    }
+	
+	    // Reset
+	    function doReset() {
+	        curLevel = 0; 
+	        wrongs.fill(0); 
+	        stopConfetti();
+	        if (bgMusicInstance) { bgMusicInstance.stop(); bgMusicInstance = null; }
+	        gamePgs.forEach(gp => {
+	            gp.inp.text = ""; gp.errLbl.text = "";
+	            gp.hintBtn.alp(0).vis(false);
+	            gp.skipBtn.alp(0).vis(false);
+	            gp.hintBubble.alp(0).vis(false);
+	        });
+	        activeGift = gamePgs[0].gift;
+	        pages.go(homePg, "fade");
+	    }
+	
+	    //  GAME Pages----------------------------------------
+	    // HomePage---------
+	    const homePg = new Page(W, H, "rgb(13, 8, 32)", "rgb(13, 8, 32)").addTo();
+	    const glow = new GlowEffect("rgba(255,60,60,.3)", 0.2, 150, 80)
+	    
+	    Bg(800, "rgb(44, 15, 94)", "rgba(13, 8, 32,0)", homePg)
+	    
+	    // Content
+	    const gift = new Pic("gift.png")
+	        .sca(0.65)
+	        .effect(glow)
+	        .reg(CENTER, 250)
+	        .center(homePg)
+	        .mov(0, -220)
+	        .noMouse()
+	
+	    gift.animate({
+	        props: { y: gift.y - 14, rotation: 5 },
+	        time: 3,
+	        ease: "sineInOut",
+	        loop: true,
+	        rewind: true
+	    });
+	
+	    const title = new Label({
+	        text: "Guess Your \nChristmas Gift",
+	        font: "Cinzel Decorative",
+	        size: 40,
+	        color: white,
+	        align: "center",
+	        lineHeight: 45
+	    })
+	        .effect(glow)
+	        .noMouse()
+	        .center(homePg)
+	        .mov(0, 40)
+	        .sha("rgba(0,0,0,0.7)", 5, 5, 3);
+	
+	    const title2 = new Label("SHAKE  ·  LISTEN  ·  GUESS", 20, "Arial", "rgba(255,255,255,.38)")
+	        .effect(glow)
+	        .noMouse()
+	        .center(homePg)
+	        .mov(0, 140)
+	
+	    const startBtn = new Button({
+	        width: 260,
+	        height: 70,
+	        label: new Label({
+	            text: "START GAME",
+	            size: 24,
+	            font: "Arial",
+	            color: white,
+	            variant: "900"
+	        }),
+	        backgroundColor: "rgb(255, 68, 68)",
+	        rollBackgroundColor: "#ff6b6b",
+	        corner: 35
+	    })
+	        // .effect(glow)
+	        .centerReg()
+	        .center(homePg)
+	        .mov(0, 350)
+	
+	    const onStart = () => {
+	        ensureAudio();
+	        setupMotion();
+	        if (bgMusicInstance) bgMusicInstance.stop();
+	        bgMusicInstance = bgMusic.play({ volume: 0.1, loop: true });
+	        curLevel = 0;
+	        activeGift = gamePgs[0].gift;
+	        pages.go(gamePgs[0], "slide");
+	    };
+	    startBtn.on("click", onStart);
+	
+	    // Levels-----------
+	    const gamePgs = LEVELS.map(lv => {
+	        const pg = new Page(W, H, "rgb(13, 8, 32)", "rgb(13, 8, 32)").addTo();
+	        Bg(800, lv.theme, "rgba(13, 8, 32,0)",pg)
+	
+	        new Label(`LEVEL  ${lv.num} OF 3 · SHAKE FOR A HINT`, 16, "Arial", "rgba(255,255,255,.4)")
+	            .centerReg(pg)
+	            .loc(W / 2, 52)
+	            .noMouse();
+	
+	        loop(3, i => {
+	            const isActive = i === lv.num - 1, isDone = i < lv.num - 1;
+	            new Circle(isActive ? 6 : 4, isActive ? "#fff" : isDone ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.18)")
+	                .centerReg(pg)
+	                .loc(W / 2 + (i - 1) * 26, 88)
+	                .noMouse();
+	        });
+	
+	        const gift = new Pic("gift.png")
+	            .effect(glow)
+	            .sha("rgba(0,0,0,0.7)", 5, 5, 3)
+	            .sca(0.8)
+	            .reg(CENTER, 250)
+	            .center(pg)
+	            .mov(0, -220)
+	            .noMouse();
+	        Bg(500, "rgba(13, 8, 32,0.2)", "rgba(13, 8, 32,0)", pg)
+	
+	        const cue = new Label(lv.cue.toUpperCase(), 22, "Arial", "rgba(255,255,255,.38)")
+	            .alp(0.6)
+	            .center(pg)
+	            .mov(0, -10)
+	            .noMouse();
+	        cue.animate({ 
+	            props: { alpha: .3 }, 
+	            time: 2, 
+	            ease: "sineInOut", 
+	            loop: true, 
+	            rewind: true });
+	
+	        // ── Input area ──
+	        const inp = new TextInput({
+	                width: Math.min(560, W * .65),
+	                height: 75,
+	                placeholder: "What's inside?  Type here…",
+	                size: 25,
+	                font: "Arial",
+	                color: "rgba(255,255,255,.5)",
+	                placeColor: "rgba(255,255,255,.28)",
+	                backgroundColor: "rgba(255,255,255,.09)",
+	                borderColor: "rgba(255,255,255,.25)",
+	                borderWidth: 2,
+	                corner: 20,
+	                padding:25,
+	                align: "center",
+	                valign: "center"
+	            })
+	            .center(pg)
+	            .mov(0, 80);
+	
+	            inp.on("focus", () => {
+	                inp.borderColor = "rgba(255, 255, 255, 0.8)";
+	                inp.color = "rgba(255, 255, 255, 1)";
+	            });
+	
+	            inp.on("blur", () => {
+	                inp.borderColor = "rgba(255, 255, 255, 0.25)";
+	                inp.color = "rgba(255, 255, 255, 0.5)";
+	            });
+	        
+	        const errLbl = new Label("", 20, "Arial", "#ff7070")
+	            .centerReg()
+	            .center(pg)
+	            .mov(-140, 150)
+	            .noMouse();
+	
+	        const confirmBtn = new Button({
+	                width: 260, 
+	                height: 78,
+	                label: new Label("Confirm  ✓", 24, "Arial", white),
+	                backgroundColor: lv.btnColor, 
+	                rollBackgroundColor: "#ff6b6b",
+	                corner: 36
+	            })
+	            .center(pg)
+	            .mov(0, 230);
+	
+	        const hintBtn = new Button({
+	                width: 150, 
+	                height: 65,
+	                label: new Label("💡  Hint", 18, "Arial", white),
+	                backgroundColor: "#d97706", 
+	                rollBackgroundColor: "#f59e0b",
+	                corner: 33
+	            })
+	            .centerReg(pg)
+	            .mov(-100, 330)
+	            .alp(0)
+	            .vis(false);
+	
+	        const skipBtn = new Button({
+	                width: 150, 
+	                height: 65,
+	                label: new Label("⏭  Skip", 20, "Arial", white),
+	                backgroundColor: "rgba(255,255,255,.12)", rollBackgroundColor: "rgba(255,255,255,.22)",
+	                corner: 33
+	            })
+	            .centerReg(pg)
+	            .mov(90, 330)
+	            .alp(0)
+	            .vis(false);
+	
+	        const hintBubble = new Label({
+	            text: lv.hint,
+	            size: 20,
+	            font: "Arial",
+	            color: "rgba(245,170,50,.55)",
+	            backgroundColor: "rgba(245,158,11,.12)",
+	            borderColor: "rgba(245,158,11,.3)",
+	            borderWidth: 1,
+	            corner: 16,
+	            padding: 50,
+	            lineWidth: 400,
+	            align: "center",
+	            lineHeight: 24
+	        })
+	            .centerReg(pg)
+	            .mov(0, 480)
+	            .alp(0)
+	            .vis(false)
+	            .noMouse();
+	
+	        // ── Events ──
+	        const onConfirm = () => {
+	            ensureAudio();
+	            startSfx.play({ volume: 0.2 });
+	            const result = doCheck(lv.num - 1, inp, errLbl);
+	            if (result === "showHint" || result === "showSkip") {
+	                if (!hintBtn.visible) {
+	                    hintBtn.vis(true);
+	                    hintBtn.animate({ props: { alpha: 1 }, time: .25 });
+	                }
+	            }
+	            if (result === "showSkip") {
+	                if (!skipBtn.visible) {
+	                    skipBtn.vis(true);
+	                    skipBtn.animate({ props: { alpha: 1 }, time: .25 });
+	                }
+	            }
+	        };
+	        confirmBtn.on("click", onConfirm);
+	
+	        hintBtn.on("click", () => {
+	            startSfx.play({ volume: 0.2 })
+	            if (hintBubble.visible) {
+	                hintBubble.animate({ 
+	                    props: { alpha: 0 }, 
+	                    time: .15, 
+	                    call: () => hintBubble.vis(false) 
+	                });
+	            } else {
+	                hintBubble.vis(true); 
+	                hintBubble.animate({ props: { alpha: 1 }, time: .22 });
+	            }
+	        });
+	
+	        skipBtn.on("click", () => {
+	            startSfx.play({ volume: 0.2 })
+	            hintBubble.animate({ 
+	                props: { alpha: 0 }, 
+	                time: .1, 
+	                call: () => hintBubble.vis(false) 
+	            });
+	            const next = lv.num;
+	            if (next >= LEVELS.length) { 
+	                pages.go(finalPg, "fade"); 
+	                return; 
+	            }
+	            curLevel = next; 
+	            activeGift = gamePgs[next].gift;
+	            pages.go(gamePgs[next], "slide");
+	        });
+	
+	        // Store refs on the Page for doSuccess and doReset
+	        pg.onConfirm = onConfirm;
+	        pg.gift = gift;
+	        pg.inp = inp; 
+	        pg.errLbl = errLbl;
+	        pg.hintBtn = hintBtn; 
+	        pg.skipBtn = skipBtn; 
+	        pg.hintBubble = hintBubble;
+	        return pg;
+	    });
+	
+	    activeGift = gamePgs[0].gift;
+	
+	    // FinalPage---------
+	    const finalPg = new Page(W, H, "rgb(13, 8, 32)", "rgb(13, 8, 32)").addTo();
+	
+	    Bg(800, "#0a2d0a", "rgba(13, 8, 32,0)", finalPg)
+	
+	    const treeEmoji = new Label("🎄", 150, "Arial", white)
+	        .centerReg(finalPg)
+	        .center(finalPg)
+	        .mov(0, -100)
+	        .noMouse();
+	    treeEmoji.animate({ 
+	        props: { y: treeEmoji.y - 18 }, 
+	        time: 1.9, 
+	        ease: "sineInOut", 
+	        loop: true, 
+	        rewind: true 
+	    });
+	
+	    new Label({
+	            text: "All Gifts Revealed!",
+	            font: "Cinzel Decorative",
+	            size: 40,
+	            color: white,
+	            align: "center",
+	            lineHeight: 45
+	        })
+	        .effect(glow)
+	        .sha("rgba(0,0,0,0.7)", 5, 5, 3)
+	        .noMouse()
+	        .centerReg(finalPg)
+	        .mov(0, 30)
+	
+	        new Label({
+	            text: "You've cracked every mystery.\nWishing you a magical Christmas! 🎁✨",
+	            font: "Arial",
+	            size: 22,
+	            color: "rgba(255,255,255,.48)",
+	            align: "center",
+	            lineHeight: 25
+	        })
+	        .effect(glow)
+	        .noMouse()
+	        .center(finalPg)
+	        .mov(0, 130)
+	
+	    const restartBtn = new Button({
+	            width: 260, height: 70,
+	            label: new Label("↺  Play Again", 24, "Arial", white),
+	            backgroundColor: "#d63030", 
+	            rollBackgroundColor: "#ff5050",
+	            corner: 35
+	        })
+	        .center(finalPg)
+	        .mov(0, 250)
+	
+	    restartBtn.on("click", doReset);
+	
+	    //  GAME Pages----------------------------------------
+	    const pages = new Pages([
+	            { page: homePg, swipe: [null, null, null, gamePgs[0]] },
+	            { page: gamePgs[0], swipe: [null, null, null, gamePgs[1]] },
+	            { page: gamePgs[1], swipe: [null, null, null, gamePgs[2]] },
+	            { page: gamePgs[2], swipe: [null, null, null, finalPg] },
+	            { page: finalPg, swipe: [null, null, null, null] }
+	        ], "fade", .4)
+	        .addTo(S);
+	
+	    F.on("keydown", e => {
+	        if (e.keyCode !== 13) return;
+	        if (pages.page === homePg) {
+	            onStart();
+	        } else if (pages.page === finalPg) {
+	            doReset();
+	        } else {
+	            const gIdx = gamePgs.indexOf(pages.page);
+	            if (gIdx !== -1) gamePgs[gIdx].onConfirm();
+	        }
+	    });
+	
+	    pages.go(homePg);
+	    S.update();
+	  
+	} // end runZapp
+
+} // end ready
+
+</script>
+
+</head>
+<body></body>
+</html>
